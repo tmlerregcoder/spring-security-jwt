@@ -1,6 +1,5 @@
 package estudos.spring.security.jwt.security;
-
-import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,23 +12,20 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain; // Nova importação para SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.h2.server.web.WebServlet;
-// Importação para WebServlet do H2
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true) // Substitui @EnableGlobalMethodSecurity
 public class WebSecurityConfig {
-
-    // Lista de URLs que não exigem autenticação (para Swagger e H2 Console)
-    private static final String[] SWAGGER_WHITELIST = {
-        "/v2/api-docs",
-        "/swagger-resources",
-        "/swagger-resources/**",
-        "/configuration/ui",
-        "/configuration/security",
+    @Autowired
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
+    
+    private static final String[] SWAGGER_WHITELIST = {        
+        "/h2-console/**",        
+        "/v3/api-docs/**",
         "/swagger-ui.html",
-        "/webjars/**"
+        "/swagger-ui/**"
+       
     };
 
     /**
@@ -59,14 +55,15 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(new JWTFilter(), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers(SWAGGER_WHITELIST).permitAll()
-                    .requestMatchers("/h2-console/**").permitAll()
+                    .requestMatchers(SWAGGER_WHITELIST).permitAll()                    
                     .requestMatchers(HttpMethod.POST, "/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/users").permitAll()
                     .requestMatchers(HttpMethod.GET, "/users").hasAnyRole("USERS", "MANAGERS")
                     .requestMatchers("/managers").hasAnyRole("MANAGERS")
                     .anyRequest().authenticated()
-                );
+                ).exceptionHandling(exceptions -> exceptions
+                .accessDeniedHandler(customAccessDeniedHandler)
+            );
         
         return http.build();
     }

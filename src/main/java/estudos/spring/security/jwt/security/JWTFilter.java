@@ -24,20 +24,20 @@ public class JWTFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        //obtem o token da request com AUTHORIZATION
         String token = request.getHeader(JWTCreator.HEADER_AUTHORIZATION);
-        //esta implementação só esta validando a integridade do token
         try {
-            if (token != null && !token.isEmpty()) {
+            if (token != null && token.startsWith(SecurityConfig.PREFIX) && !token.isEmpty()) {
+                //token = token.substring(SecurityConfig.PREFIX.length());
+                //token = token.trim();
+
                 JWTObject tokenObject = JWTCreator.create(token, SecurityConfig.PREFIX, SecurityConfig.KEY);
 
                 List<SimpleGrantedAuthority> authorities = authorities(tokenObject.getRoles());
 
-                UsernamePasswordAuthenticationToken userToken
-                        = new UsernamePasswordAuthenticationToken(
-                                tokenObject.getSubject(),
-                                null,
-                                authorities);
+                UsernamePasswordAuthenticationToken userToken = new UsernamePasswordAuthenticationToken(
+                        tokenObject.getSubject(),
+                        null,
+                        authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(userToken);
 
